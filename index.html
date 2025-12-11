@@ -78,7 +78,18 @@
         .scrollbar-thin::-webkit-scrollbar { width: 6px; }
         .scrollbar-thin::-webkit-scrollbar-track { background: #1e1e2e; }
         .scrollbar-thin::-webkit-scrollbar-thumb { background: #3f3f5a; border-radius: 3px; }
+
+        /* Chart tooltip styling */
+        .chart-tooltip {
+            background: #12121a !important;
+            border: 1px solid #1e1e2e !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
+        }
     </style>
+    <!-- Chart.js for performance chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </head>
 <body class="min-h-screen text-white">
     <!-- Header -->
@@ -124,6 +135,42 @@
                 <div class="text-lg font-semibold" id="nextSession">--</div>
             </div>
         </div>
+
+        <!-- Performance Chart -->
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="text-3xl">📊</span>
+                Performance Chart
+            </h2>
+            <div class="bg-arena-card border border-arena-border rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <span class="text-sm text-gray-400">GPT-4.1</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                            <span class="text-sm text-gray-400">Gemini 2.5 Pro</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            <span class="text-sm text-gray-400">Grok 4.1</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">Portfolio Value Over Time</div>
+                </div>
+                <div class="relative" style="height: 320px;">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div id="chartNoData" class="hidden absolute inset-0 flex items-center justify-center text-gray-500">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">📈</div>
+                        <p>Chart data will appear after trading sessions run</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- Leaderboard -->
         <section class="mb-10">
@@ -230,6 +277,208 @@
         const API_BASE = 'https://ai-stocks-app-production.up.railway.app';
 
         let agents = [];
+        let performanceChart = null;
+
+        // Agent colors for the chart
+        const agentColors = {
+            'GPT-4.1': { border: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' },
+            'Gemini 2.5 Pro': { border: '#10b981', background: 'rgba(16, 185, 129, 0.1)' },
+            'Grok 4.1': { border: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' },
+            // Fallback colors for other agents
+            'default': { border: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }
+        };
+
+        function getAgentColor(name) {
+            return agentColors[name] || agentColors['default'];
+        }
+
+        async function fetchPerformanceHistory() {
+            try {
+                const res = await fetch(`${API_BASE}/api/performance/history?days=30`);
+                const data = await res.json();
+                renderPerformanceChart(data.history);
+            } catch (e) {
+                console.error('Error fetching performance history:', e);
+                // Show placeholder chart if API fails
+                renderPlaceholderChart();
+            }
+        }
+
+        function renderPerformanceChart(historyData) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const noDataEl = document.getElementById('chartNoData');
+
+            // Check if we have any data
+            const hasData = historyData && Object.keys(historyData).length > 0 &&
+                Object.values(historyData).some(arr => arr && arr.length > 0);
+
+            if (!hasData) {
+                renderPlaceholderChart();
+                return;
+            }
+
+            noDataEl.classList.add('hidden');
+
+            // Prepare datasets for each agent
+            const datasets = Object.entries(historyData).map(([agentName, dataPoints]) => {
+                const colors = getAgentColor(agentName);
+                return {
+                    label: agentName,
+                    data: dataPoints.map(point => ({
+                        x: new Date(point.date),
+                        y: point.value
+                    })),
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: colors.border,
+                    pointBorderColor: '#0a0a0f',
+                    pointBorderWidth: 2
+                };
+            });
+
+            // Destroy existing chart if it exists
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: false // We have our own legend
+                        },
+                        tooltip: {
+                            backgroundColor: '#12121a',
+                            titleColor: '#fff',
+                            bodyColor: '#9ca3af',
+                            borderColor: '#1e1e2e',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: $${context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day',
+                                displayFormats: {
+                                    day: 'MMM d'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(30, 30, 46, 0.5)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { size: 11 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(30, 30, 46, 0.5)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { size: 11 },
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderPlaceholderChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+
+            // Create placeholder with starting values
+            const today = new Date();
+            const placeholderData = ['GPT-4.1', 'Gemini 2.5 Pro', 'Grok 4.1'].map(name => {
+                const colors = getAgentColor(name);
+                return {
+                    label: name,
+                    data: [{ x: today, y: 10000 }],
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                    borderWidth: 2,
+                    fill: true,
+                    pointRadius: 6,
+                    pointBackgroundColor: colors.border,
+                    pointBorderColor: '#0a0a0f',
+                    pointBorderWidth: 2
+                };
+            });
+
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: placeholderData },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#12121a',
+                            titleColor: '#fff',
+                            bodyColor: '#9ca3af',
+                            borderColor: '#1e1e2e',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: $${context.parsed.y.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                            grid: { color: 'rgba(30, 30, 46, 0.5)', drawBorder: false },
+                            ticks: { color: '#6b7280', font: { size: 11 } }
+                        },
+                        y: {
+                            min: 9000,
+                            max: 11000,
+                            grid: { color: 'rgba(30, 30, 46, 0.5)', drawBorder: false },
+                            ticks: {
+                                color: '#6b7280',
+                                font: { size: 11 },
+                                callback: value => '$' + value.toLocaleString()
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         async function fetchData() {
             try {
@@ -246,6 +495,9 @@
                 const tradesRes = await fetch(`${API_BASE}/api/trades/recent`);
                 const tradesData = await tradesRes.json();
                 renderTrades(tradesData.trades);
+
+                // Fetch performance history for chart
+                await fetchPerformanceHistory();
 
                 document.getElementById('lastUpdate').textContent =
                     new Date().toLocaleTimeString();
