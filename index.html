@@ -147,15 +147,15 @@
                     <div class="flex items-center gap-6">
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                            <span class="text-sm text-gray-400">GPT-4.1</span>
+                            <span class="text-sm text-gray-400">GPT-4o</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                            <span class="text-sm text-gray-400">Gemini 2.5 Pro</span>
+                            <span class="text-sm text-gray-400">Gemini 2.0 Flash</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                            <span class="text-sm text-gray-400">Grok 4.1</span>
+                            <span class="text-sm text-gray-400">Grok 3</span>
                         </div>
                     </div>
                     <div class="text-xs text-gray-500">Portfolio Value Over Time</div>
@@ -235,7 +235,7 @@
                 <div class="bg-arena-card border border-arena-border rounded-xl p-6">
                     <div class="text-3xl mb-4">🤖</div>
                     <h3 class="font-semibold mb-2">AI Agents</h3>
-                    <p class="text-sm text-gray-400">GPT-4, Gemini, and Grok each control a $10,000 portfolio. They analyze news, research stocks, and make autonomous trading decisions.</p>
+                    <p class="text-sm text-gray-400">GPT-4o, Gemini 2.0 Flash, and Grok 3 each control a $10,000 portfolio. They analyze news, research stocks, and make autonomous trading decisions.</p>
                 </div>
                 <div class="bg-arena-card border border-arena-border rounded-xl p-6">
                     <div class="text-3xl mb-4">📰</div>
@@ -281,9 +281,11 @@
 
         // Agent colors for the chart
         const agentColors = {
-            'GPT-4.1': { border: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' },
-            'Gemini 2.5 Pro': { border: '#10b981', background: 'rgba(16, 185, 129, 0.1)' },
-            'Grok 4.1': { border: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' },
+            'GPT-4o': { border: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' },
+            'Gemini 2.0 Flash': { border: '#10b981', background: 'rgba(16, 185, 129, 0.1)' },
+            'Gemini 2.0': { border: '#10b981', background: 'rgba(16, 185, 129, 0.1)' },
+            'Grok 3': { border: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' },
+            'Grok': { border: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' },
             // Fallback colors for other agents
             'default': { border: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }
         };
@@ -417,7 +419,7 @@
 
             // Create placeholder with starting values
             const today = new Date();
-            const placeholderData = ['GPT-4.1', 'Gemini 2.5 Pro', 'Grok 4.1'].map(name => {
+            const placeholderData = ['GPT-4o', 'Gemini 2.0 Flash', 'Grok 3'].map(name => {
                 const colors = getAgentColor(name);
                 return {
                     label: name,
