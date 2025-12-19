@@ -601,12 +601,32 @@
                     const data = await res.json();
 
                     const positionsHtml = data.positions.length ?
-                        data.positions.slice(0, 5).map(p => `
-                            <div class="flex justify-between text-sm py-1.5 border-b border-arena-border/50 last:border-0">
-                                <span class="font-mono font-semibold">${p.symbol}</span>
-                                <span class="text-gray-400">${p.quantity} @ $${p.avg_cost.toFixed(2)}</span>
+                        data.positions.slice(0, 5).map(p => {
+                            const pnlClass = p.unrealized_pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                            const pnlSign = p.unrealized_pnl >= 0 ? '+' : '';
+                            const pnlPercent = ((p.current_price - p.avg_cost) / p.avg_cost * 100);
+                            return `
+                            <div class="py-2 border-b border-arena-border/50 last:border-0">
+                                <div class="flex justify-between items-start mb-1">
+                                    <div>
+                                        <span class="font-mono font-bold text-base">${p.symbol}</span>
+                                        <span class="text-gray-500 text-xs ml-2">${p.quantity} shares</span>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-bold mono">$${p.market_value.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <div class="text-gray-400">
+                                        Cost: $${p.avg_cost.toFixed(2)} → Now: $${p.current_price.toFixed(2)}
+                                    </div>
+                                    <div class="${pnlClass} font-semibold">
+                                        ${pnlSign}$${Math.abs(p.unrealized_pnl).toFixed(2)} (${pnlSign}${pnlPercent.toFixed(2)}%)
+                                    </div>
+                                </div>
                             </div>
-                        `).join('') :
+                            `;
+                        }).join('') :
                         '<div class="text-gray-500 text-sm py-2">💵 All cash - no positions</div>';
 
                     const pnlClass = data.portfolio.pnl >= 0 ? 'text-green-400' : 'text-red-400';
@@ -625,14 +645,18 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="grid grid-cols-3 gap-3 mb-4">
                                 <div class="bg-arena-dark rounded-lg p-3">
                                     <div class="text-xs text-gray-500 mb-1">Portfolio</div>
-                                    <div class="font-bold mono">$${data.portfolio.total_value.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                    <div class="font-bold mono text-sm">$${data.portfolio.total_value.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                                </div>
+                                <div class="bg-arena-dark rounded-lg p-3">
+                                    <div class="text-xs text-gray-500 mb-1">Cash</div>
+                                    <div class="font-bold mono text-sm">$${data.portfolio.cash.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                                 </div>
                                 <div class="bg-arena-dark rounded-lg p-3">
                                     <div class="text-xs text-gray-500 mb-1">P&L</div>
-                                    <div class="font-bold ${pnlClass}">${data.portfolio.pnl >= 0 ? '+' : ''}$${data.portfolio.pnl.toFixed(2)}</div>
+                                    <div class="font-bold ${pnlClass} text-sm">${data.portfolio.pnl >= 0 ? '+' : ''}$${data.portfolio.pnl.toFixed(2)}</div>
                                 </div>
                             </div>
 
